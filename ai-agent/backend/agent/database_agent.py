@@ -4,12 +4,16 @@ import os
 from datetime import datetime, timedelta
 from decimal import Decimal
 from functools import lru_cache
+from pathlib import Path
 
 import mysql.connector
 from dotenv import load_dotenv
 
+# Always load .env from the backend directory (one level up from agent/)
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_ENV_PATH)
 
-load_dotenv()
+from schema_adapter import resolve_table, normalize_customer_row
 
 
 # ============================================================
@@ -20,7 +24,7 @@ DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_NAME = os.getenv("DB_NAME", "eshakara")
+DB_NAME = os.getenv("DB_NAME", "esahakara_demo")
 
 
 # ============================================================
@@ -32,28 +36,26 @@ DATE_COLUMNS = [
     "created_on",
     "created_date",
     "creation_date",
-
+    "cust_reg_date",
+    "acc_open_date",
+    "fd_trans_date",
+    "sb_trans_date",
+    "trans_date",
     "onboarded_at",
     "onboarding_at",
     "onboarding_date",
-
     "opened_at",
     "opening_at",
     "opening_date",
-
     "account_created_at",
     "account_opened_at",
-
     "transaction_date",
     "transaction_datetime",
     "transacted_at",
-
     "deposit_date",
     "deposit_datetime",
-
     "date_created",
     "datetime_created",
-
     "timestamp",
     "date",
     "datetime",
@@ -64,6 +66,7 @@ CUSTOMER_ID_COLUMNS = [
     "customer_id",
     "cust_id",
     "customer_no",
+    "cust_no",
     "user_id",
     "member_id",
 ]
@@ -72,6 +75,7 @@ CUSTOMER_ID_COLUMNS = [
 NAME_COLUMNS = [
     "customer_name",
     "cust_name",
+    "cust_fname",
     "customer",
     "name",
 ]
@@ -80,6 +84,10 @@ NAME_COLUMNS = [
 ACCOUNT_COLUMNS = [
     "account_no",
     "account_number",
+    "fd_acc_no",
+    "rd_acc_no",
+    "sb_acc_no",
+    "share_acc_no",
     "ac_no",
     "a_c_no",
 ]
@@ -87,6 +95,13 @@ ACCOUNT_COLUMNS = [
 
 AMOUNT_COLUMNS = [
     "transaction_amount",
+    "fd_trans_amt",
+    "trans_amt",
+    "sb_trans_amt",
+    "credit_amt",
+    "debit_amt",
+    "principal_amt",
+    "balance",
     "amount",
     "deposit_amount",
     "credit_amount",
@@ -96,6 +111,10 @@ AMOUNT_COLUMNS = [
 
 TRANSACTION_TYPE_COLUMNS = [
     "transaction_type",
+    "fd_trans_type",
+    "sb_trans_type",
+    "rd_trans_type",
+    "share_trans_type",
     "type",
     "entry_type",
 ]
@@ -104,6 +123,7 @@ TRANSACTION_TYPE_COLUMNS = [
 PAYMENT_MODE_COLUMNS = [
     "mode_of_pay",
     "payment_mode",
+    "paymode",
     "mode",
 ]
 
@@ -122,11 +142,11 @@ DESCRIPTION_COLUMNS = [
 def get_connection():
 
     return mysql.connector.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        database=DB_NAME,
+        host=os.getenv("DB_HOST", DB_HOST),
+        port=int(os.getenv("DB_PORT", DB_PORT)),
+        user=os.getenv("DB_USER", DB_USER),
+        password=os.getenv("DB_PASSWORD", DB_PASSWORD),
+        database=os.getenv("DB_NAME", DB_NAME),
         autocommit=True,
         connection_timeout=5,
     )
@@ -352,17 +372,21 @@ def get_customer(customer_id):
             dictionary=True
         )
 
+        tbl = resolve_table("customer")
+        id_col = "cust_id" if tbl == "tbl_customers" else "customer_id"
+
         cursor.execute(
-            """
+            f"""
             SELECT *
-            FROM `customer`
-            WHERE `customer_id` = %s
+            FROM `{tbl}`
+            WHERE `{id_col}` = %s
             LIMIT 1
             """,
             (customer_id,),
         )
 
-        return cursor.fetchone()
+        row = cursor.fetchone()
+        return normalize_customer_row(row)
 
     finally:
 
@@ -383,8 +407,10 @@ def get_customer_count():
         connection = get_connection()
         cursor = connection.cursor()
 
+        tbl = resolve_table("customer")
+
         cursor.execute(
-            "SELECT COUNT(*) FROM `customer`"
+            f"SELECT COUNT(*) FROM `{tbl}`"
         )
 
         return int(cursor.fetchone()[0])
@@ -400,11 +426,12 @@ def get_customer_count():
 
 def get_customers_by_period(period):
 
-    columns = get_table_columns("customer")
+    tbl = resolve_table("customer")
+    columns = get_table_columns(tbl)
 
     date_column = find_column(
         columns,
-        DATE_COLUMNS,
+        DATE_COLUMNS + ["cust_reg_date"],
     )
 
     if not date_column:
@@ -427,7 +454,7 @@ def get_customers_by_period(period):
 
         sql = f"""
             SELECT *
-            FROM `customer`
+            FROM `{tbl}`
             WHERE {quote_identifier(date_column)} >= %s
               AND {quote_identifier(date_column)} < %s
             ORDER BY {quote_identifier(date_column)} DESC
@@ -438,7 +465,9 @@ def get_customers_by_period(period):
             (start, end),
         )
 
-        return cursor.fetchall(), date_column
+        raw_rows = cursor.fetchall()
+        rows = [normalize_customer_row(r) for r in raw_rows]
+        return rows, date_column
 
     finally:
 
@@ -707,10 +736,12 @@ def get_product_records(
     limit=500,
 ):
 
-    if not table_exists(table):
+    resolved = resolve_table(table)
+
+    if not table_exists(resolved):
         return [], None
 
-    columns = get_table_columns(table)
+    columns = get_table_columns(resolved)
 
     date_column = find_column(
         columns,
@@ -754,7 +785,7 @@ def get_product_records(
 
     sql = (
         f"SELECT * FROM "
-        f"{quote_identifier(table)}"
+        f"{quote_identifier(resolved)}"
     )
 
     if conditions:
@@ -867,18 +898,34 @@ def database_health():
 
 def get_fd_schemes():
     """Query distinct FD schemes and their DB field statistics."""
-    sql = """
-        SELECT 
-            scheme_name,
-            COUNT(*) as account_count,
-            MIN(fd_amount) as min_deposit,
-            MAX(fd_amount) as max_deposit,
-            AVG(fd_amount) as avg_deposit,
-            SUM(fd_amount) as total_deposit_volume
-        FROM fd
-        GROUP BY scheme_name
-        ORDER BY account_count DESC, scheme_name ASC
-    """
+    tbl = resolve_table("fd_schemes")
+    if tbl == "tbl_fd_masters":
+        sql = """
+            SELECT 
+                m.fd_scheme_name as scheme_name,
+                COUNT(a.fd_acc_id) as account_count,
+                COALESCE(MIN(a.principal_amt), m.fd_min_amt) as min_deposit,
+                COALESCE(MAX(a.principal_amt), m.fd_max_amt) as max_deposit,
+                COALESCE(AVG(a.principal_amt), 0) as avg_deposit,
+                COALESCE(SUM(a.principal_amt), 0) as total_deposit_volume
+            FROM tbl_fd_masters m
+            LEFT JOIN tbl_fd_account a ON m.fd_scheme_id = a.fd_scheme_id
+            GROUP BY m.fd_scheme_id, m.fd_scheme_name
+            ORDER BY account_count DESC, scheme_name ASC
+        """
+    else:
+        sql = """
+            SELECT 
+                scheme_name,
+                COUNT(*) as account_count,
+                MIN(fd_amount) as min_deposit,
+                MAX(fd_amount) as max_deposit,
+                AVG(fd_amount) as avg_deposit,
+                SUM(fd_amount) as total_deposit_volume
+            FROM fd
+            GROUP BY scheme_name
+            ORDER BY account_count DESC, scheme_name ASC
+        """
     connection = None
     cursor = None
     try:
@@ -895,19 +942,36 @@ def get_fd_schemes():
 
 def get_rd_schemes():
     """Query distinct RD tenure schemes and their DB field statistics."""
-    sql = """
-        SELECT 
-            tenure,
-            COUNT(*) as account_count,
-            MIN(principal_amount) as min_installment,
-            MAX(principal_amount) as max_installment,
-            SUM(principal_amount) as total_monthly_inflow,
-            MIN(maturity_amount) as min_maturity,
-            MAX(maturity_amount) as max_maturity
-        FROM rd
-        GROUP BY tenure
-        ORDER BY tenure ASC
-    """
+    tbl = resolve_table("rd_schemes")
+    if tbl == "tbl_rd_masters":
+        sql = """
+            SELECT 
+                COALESCE(ROUND(m.rd_maturity_days / 30.41), 12) as tenure,
+                COUNT(a.rd_acc_id) as account_count,
+                COALESCE(MIN(a.balance), m.rd_min_amt) as min_installment,
+                COALESCE(MAX(a.balance), m.rd_max_amt) as max_installment,
+                COALESCE(SUM(a.balance), 0) as total_monthly_inflow,
+                COALESCE(MIN(a.balance), 0) as min_maturity,
+                COALESCE(MAX(a.balance), 0) as max_maturity
+            FROM tbl_rd_masters m
+            LEFT JOIN tbl_rd_account a ON m.rd_scheme_id = a.rd_scheme_id
+            GROUP BY m.rd_scheme_id, m.rd_maturity_days, m.rd_min_amt, m.rd_max_amt
+            ORDER BY tenure ASC
+        """
+    else:
+        sql = """
+            SELECT 
+                tenure,
+                COUNT(*) as account_count,
+                MIN(principal_amount) as min_installment,
+                MAX(principal_amount) as max_installment,
+                SUM(principal_amount) as total_monthly_inflow,
+                MIN(maturity_amount) as min_maturity,
+                MAX(maturity_amount) as max_maturity
+            FROM rd
+            GROUP BY tenure
+            ORDER BY tenure ASC
+        """
     connection = None
     cursor = None
     try:
@@ -924,15 +988,27 @@ def get_rd_schemes():
 
 def get_share_schemes():
     """Query Share capital statistics."""
-    sql = """
-        SELECT 
-            COUNT(*) as account_count,
-            SUM(total_shares) as total_shares,
-            MIN(share_amount) as min_amount,
-            MAX(share_amount) as max_amount,
-            SUM(share_amount) as total_share_capital
-        FROM share_account
-    """
+    tbl = resolve_table("share_account")
+    if tbl == "tbl_share_account":
+        sql = """
+            SELECT 
+                COUNT(*) as account_count,
+                COALESCE(SUM(share_qty), 0) as total_shares,
+                COALESCE(MIN(share_qty * 100), 0) as min_amount,
+                COALESCE(MAX(share_qty * 100), 0) as max_amount,
+                COALESCE(SUM(share_qty * 100), 0) as total_share_capital
+            FROM tbl_share_account
+        """
+    else:
+        sql = """
+            SELECT 
+                COUNT(*) as account_count,
+                SUM(total_shares) as total_shares,
+                MIN(share_amount) as min_amount,
+                MAX(share_amount) as max_amount,
+                SUM(share_amount) as total_share_capital
+            FROM share_account
+        """
     connection = None
     cursor = None
     try:
@@ -944,4 +1020,4 @@ def get_share_schemes():
         if cursor:
             cursor.close()
         if connection:
-            connection.close()
+            connection.close()

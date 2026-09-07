@@ -38,6 +38,8 @@ from ai_model.anomaly_detector import (
     get_detector,
 )
 
+from schema_adapter import resolve_table, normalize_customer_row
+
 
 # ============================================================
 # DATABASE HELPERS
@@ -99,6 +101,15 @@ def check_duplicates(
     """
 
     duplicates = {}
+    tbl = resolve_table("customer")
+    is_cbs = (tbl == "tbl_customers")
+
+    id_col = "cust_id" if is_cbs else "customer_id"
+    fname_col = "cust_fname" if is_cbs else "first_name"
+    lname_col = "cust_lname" if is_cbs else "last_name"
+    aadhaar_col = "cust_aadhar" if is_cbs else "aadhaar_no"
+    pan_col = "cust_pan_no" if is_cbs else "pan_no"
+    phone_col = "cust_ph_no" if is_cbs else "phone_no"
 
     # Duplicate Aadhaar
     aadhaar = str(
@@ -108,11 +119,11 @@ def check_duplicates(
     if aadhaar and "X" not in aadhaar.upper():
 
         rows = _fetch_all(
-            """
-            SELECT customer_id, first_name, last_name
-            FROM customer
-            WHERE aadhaar_no = %s
-              AND customer_id <> %s
+            f"""
+            SELECT {id_col} AS customer_id, {fname_col} AS first_name, {lname_col} AS last_name
+            FROM {tbl}
+            WHERE {aadhaar_col} = %s
+              AND {id_col} <> %s
             LIMIT 3
             """,
             (aadhaar, customer_id)
@@ -136,11 +147,11 @@ def check_duplicates(
     if pan and len(pan) == 10:
 
         rows = _fetch_all(
-            """
-            SELECT customer_id, first_name, last_name
-            FROM customer
-            WHERE pan_no = %s
-              AND customer_id <> %s
+            f"""
+            SELECT {id_col} AS customer_id, {fname_col} AS first_name, {lname_col} AS last_name
+            FROM {tbl}
+            WHERE {pan_col} = %s
+              AND {id_col} <> %s
             LIMIT 3
             """,
             (pan, customer_id)
@@ -164,11 +175,11 @@ def check_duplicates(
     if phone and len(phone) >= 10:
 
         rows = _fetch_all(
-            """
-            SELECT customer_id, first_name, last_name
-            FROM customer
-            WHERE phone_no = %s
-              AND customer_id <> %s
+            f"""
+            SELECT {id_col} AS customer_id, {fname_col} AS first_name, {lname_col} AS last_name
+            FROM {tbl}
+            WHERE {phone_col} = %s
+              AND {id_col} <> %s
             LIMIT 3
             """,
             (phone, customer_id)
@@ -208,26 +219,19 @@ def validate_customer_full(
     # 1. FETCH CUSTOMER
     # ========================================================
 
-    customer = _fetch_one(
-        """
-        SELECT
-            customer_id,
-            first_name,
-            last_name,
-            relation_name,
-            phone_no,
-            gender,
-            residential_address,
-            caste,
-            aadhaar_no,
-            pan_no,
-            status,
-            created_at
-        FROM customer
-        WHERE customer_id = %s
+    tbl = resolve_table("customer")
+    id_col = "cust_id" if tbl == "tbl_customers" else "customer_id"
+
+    raw_customer = _fetch_one(
+        f"""
+        SELECT *
+        FROM {tbl}
+        WHERE {id_col} = %s
         """,
         (customer_id,)
     )
+
+    customer = normalize_customer_row(raw_customer)
 
     if not customer:
 
@@ -480,14 +484,19 @@ def validate_all_customers() -> Dict[str, Any]:
     Returns a summary report.
     """
 
-    rows = _fetch_all(
-        """
-        SELECT customer_id, first_name, last_name
-        FROM customer
-        ORDER BY customer_id
+    tbl = resolve_table("customer")
+    id_col = "cust_id" if tbl == "tbl_customers" else "customer_id"
+
+    raw_rows = _fetch_all(
+        f"""
+        SELECT *
+        FROM {tbl}
+        ORDER BY {id_col}
         """,
         ()
     )
+
+    rows = [normalize_customer_row(r) for r in (raw_rows or []) if r]
 
     if not rows:
 
@@ -655,19 +664,18 @@ def quick_validate_customer(
     scope: "pan", "aadhaar", or "all"
     """
 
-    customer = _fetch_one(
-        """
-        SELECT
-            customer_id,
-            first_name,
-            last_name,
-            pan_no,
-            aadhaar_no
-        FROM customer
-        WHERE customer_id = %s
+    tbl = resolve_table("customer")
+    id_col = "cust_id" if tbl == "tbl_customers" else "customer_id"
+
+    raw = _fetch_one(
+        f"""
+        SELECT *
+        FROM {tbl}
+        WHERE {id_col} = %s
         """,
         (customer_id,)
     )
+    customer = normalize_customer_row(raw)
 
     if not customer:
 

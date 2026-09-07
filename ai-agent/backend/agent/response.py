@@ -1,5 +1,6 @@
 # backend/agent/response.py
 
+import re
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
@@ -285,14 +286,14 @@ def product_response(
         lines.append(f"Account Record #{idx}:")
 
         if prod_upper == "FD":
-            acc_no = row.get("account_no", "N/A")
-            scheme = row.get("scheme_name", "Standard Fixed Deposit")
-            open_date = format_datetime(row.get("account_open_date"))
-            fd_amt = format_currency(row.get("fd_amount"))
+            acc_no = row.get("fd_acc_no") or row.get("account_no", "N/A")
+            scheme = row.get("fd_scheme_name") or row.get("scheme_name", "Fixed Deposit")
+            open_date = format_datetime(row.get("acc_open_date") or row.get("account_open_date"))
+            fd_amt = format_currency(row.get("principal_amt") if row.get("principal_amt") is not None else row.get("fd_amount"))
             mat_date = format_datetime(row.get("maturity_date"))
             mat_amt = format_currency(row.get("maturity_amount"))
             status = row.get("status", "ACTIVE")
-            cust_id = row.get("customer_id")
+            cust_id = row.get("cust_id") or row.get("customer_id")
             cust_name = None
             if cust_id:
                 try:
@@ -312,19 +313,21 @@ def product_response(
             lines.append(f"  • Deposit Scheme / Product: {scheme}")
             lines.append(f"  • Principal Deposit Amount: {fd_amt}")
             lines.append(f"  • Deposit Opening Date: {open_date}")
-            lines.append(f"  • Maturity Date: {mat_date}")
-            lines.append(f"  • Expected Maturity Payout: {mat_amt}")
+            if mat_date != "Date unavailable":
+                lines.append(f"  • Maturity Date: {mat_date}")
+            if mat_amt != "Rs. 0.00":
+                lines.append(f"  • Expected Maturity Payout: {mat_amt}")
             lines.append(f"  • Deposit Status: {status}")
 
         elif prod_upper == "RD":
-            rd_no = row.get("rd_account_no", "N/A")
-            open_date = format_datetime(row.get("account_open_date"))
-            principal = format_currency(row.get("principal_amount"))
-            tenure = row.get("tenure", "N/A")
+            rd_no = row.get("rd_acc_no") or row.get("rd_account_no", "N/A")
+            open_date = format_datetime(row.get("acc_open_date") or row.get("account_open_date"))
+            principal = format_currency(row.get("balance") if row.get("balance") is not None else row.get("principal_amount"))
+            tenure = row.get("tenure", "12")
             mat_date = format_datetime(row.get("maturity_date"))
             mat_amt = format_currency(row.get("maturity_amount"))
-            status = row.get("status", "ACTIVE")
-            cust_id = row.get("customer_id")
+            status = row.get("rd_status") or row.get("status", "ACTIVE")
+            cust_id = row.get("cust_id") or row.get("customer_id")
             cust_name = None
             if cust_id:
                 try:
@@ -344,17 +347,19 @@ def product_response(
             lines.append(f"  • Monthly Installment Amount: {principal}")
             lines.append(f"  • Deposit Tenure (Duration): {tenure} Months")
             lines.append(f"  • Account Opening Date: {open_date}")
-            lines.append(f"  • Maturity Date: {mat_date}")
-            lines.append(f"  • Expected Maturity Value: {mat_amt}")
+            if mat_date != "Date unavailable":
+                lines.append(f"  • Maturity Date: {mat_date}")
+            if mat_amt != "Rs. 0.00":
+                lines.append(f"  • Expected Maturity Value: {mat_amt}")
             lines.append(f"  • Account Status: {status}")
 
         elif prod_upper in ("SHARE", "SHARE_ACCOUNT"):
-            acc_no = row.get("account_no", "N/A")
-            member_id = row.get("customer_id", "N/A")
-            shares = row.get("total_shares", 0)
-            share_val = format_currency(row.get("share_amount"))
-            open_date = format_datetime(row.get("account_open_date"))
-            status = row.get("status", "ACTIVE")
+            acc_no = row.get("share_acc_no") or row.get("account_no", "N/A")
+            member_id = row.get("cust_id") or row.get("customer_id", "N/A")
+            shares = row.get("share_qty") or row.get("total_shares", 0)
+            share_val = format_currency(row.get("share_amount") if row.get("share_amount") is not None else (Decimal(str(shares or 0)) * 100))
+            open_date = format_datetime(row.get("acc_open_date") or row.get("account_open_date"))
+            status = row.get("share_status") or row.get("status", "ACTIVE")
             cust_name = None
             if member_id and str(member_id).isdigit():
                 try:
@@ -457,9 +462,13 @@ def rd_schemes_response(rows: List[Dict[str, Any]]) -> str:
         min_mat = Decimal(str(r.get("min_maturity", 0)))
         max_mat = Decimal(str(r.get("max_maturity", 0)))
 
-        years = tenure // 12
+        try:
+            tenure_num = int(re.search(r'\d+', str(tenure)).group(0))
+        except Exception:
+            tenure_num = 12
+        years = max(1, tenure_num // 12)
         years_label = f"{years} Year" if years == 1 else f"{years} Years"
-        lines.append(f"{idx}. {tenure}-Month Recurring Deposit ({years_label} Tenure)")
+        lines.append(f"{idx}. {tenure_num}-Month Recurring Deposit ({years_label} Tenure)")
         if min_inst == max_inst:
             lines.append(f"   • Monthly Installment: {format_currency(min_inst)} / month")
         else:
@@ -500,11 +509,15 @@ def all_schemes_response(fd_rows: List[Dict[str, Any]], rd_rows: List[Dict[str, 
         lines.append(f"Recurring Deposit (RD) Schemes ({rd_count} Tenures):")
         for idx, r in enumerate(rd_rows, 1):
             tenure = r.get("tenure", 0)
+            try:
+                tenure_num = int(re.search(r'\d+', str(tenure)).group(0))
+            except Exception:
+                tenure_num = 12
             cnt = r.get("account_count", 0)
             min_inst = Decimal(str(r.get("min_installment", 0)))
             max_inst = Decimal(str(r.get("max_installment", 0)))
             rng = format_currency(min_inst) if min_inst == max_inst else f"{format_currency(min_inst)} – {format_currency(max_inst)}"
-            lines.append(f"  {idx}. {tenure}-Month RD Plan ({tenure//12} Year) — {cnt} account(s) ({rng} / month)")
+            lines.append(f"  {idx}. {tenure_num}-Month RD Plan ({max(1, tenure_num // 12)} Year) — {cnt} account(s) ({rng} / month)")
         lines.append("")
 
     if share_rows and share_rows[0].get("account_count"):

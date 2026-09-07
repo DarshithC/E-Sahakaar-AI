@@ -3,6 +3,7 @@ import re
 import uuid
 from datetime import datetime, date, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import mysql.connector
@@ -10,13 +11,16 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from schema_adapter import resolve_table, normalize_customer_row
 
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-load_dotenv()
+# Always load .env from this file's directory, not CWD
+_ENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(_ENV_PATH)
 
 DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
@@ -207,12 +211,15 @@ def normalize(text: str) -> str:
 
 def get_db():
 
+    load_dotenv(_ENV_PATH)
+    db_name = os.getenv("DB_NAME", DB_NAME)
+
     return mysql.connector.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        database=DB_NAME,
+        host=os.getenv("DB_HOST", DB_HOST),
+        port=int(os.getenv("DB_PORT", DB_PORT)),
+        user=os.getenv("DB_USER", DB_USER),
+        password=os.getenv("DB_PASSWORD", DB_PASSWORD),
+        database=db_name,
         autocommit=True,
     )
 
@@ -274,6 +281,19 @@ ALLOWED_TABLES = {
     "rd",
     "share_account",
     "fd_transactions",
+    "tbl_customers",
+    "tbl_fd_account",
+    "tbl_fd_masters",
+    "tbl_fd_transaction",
+    "tbl_rd_account",
+    "tbl_rd_masters",
+    "tbl_rd_transactions",
+    "tbl_share_account",
+    "tbl_share_account_master",
+    "tbl_share_transactions",
+    "tbl_sb_account",
+    "tbl_sb_transactions",
+    "tbl_loan_account",
 }
 
 
@@ -281,11 +301,15 @@ def table_columns(
     table: str
 ) -> List[str]:
 
-    if table not in ALLOWED_TABLES:
+    resolved = resolve_table(table)
+
+    if resolved not in ALLOWED_TABLES and table not in ALLOWED_TABLES:
         return []
 
-    if table in _SCHEMA_CACHE:
-        return _SCHEMA_CACHE[table]
+    if resolved in _SCHEMA_CACHE:
+        return _SCHEMA_CACHE[resolved]
+
+    db_name = os.getenv("DB_NAME", DB_NAME)
 
     rows = query_db(
         """
@@ -296,8 +320,8 @@ def table_columns(
         ORDER BY ORDINAL_POSITION
         """,
         (
-            DB_NAME,
-            table
+            db_name,
+            resolved
         )
     )
 
@@ -306,7 +330,7 @@ def table_columns(
         for row in rows
     ]
 
-    _SCHEMA_CACHE[table] = columns
+    _SCHEMA_CACHE[resolved] = columns
 
     return columns
 
@@ -378,51 +402,35 @@ def get_customer(
     customer_id: int
 ):
 
-    return execute_one(
-        """
-        SELECT
-            customer_id,
-            first_name,
-            last_name,
-            relation_name,
-            phone_no,
-            gender,
-            residential_address,
-            caste,
-            aadhaar_no,
-            pan_no,
-            status,
-            created_at
-        FROM customer
-        WHERE customer_id = %s
+    tbl = resolve_table("customer")
+    id_col = "cust_id" if tbl == "tbl_customers" else "customer_id"
+
+    row = execute_one(
+        f"""
+        SELECT *
+        FROM `{tbl}`
+        WHERE `{id_col}` = %s
         """,
         (
             customer_id,
         )
     )
+    return normalize_customer_row(row)
 
 
 def get_all_customers():
 
-    return query_db(
-        """
-        SELECT
-            customer_id,
-            first_name,
-            last_name,
-            relation_name,
-            phone_no,
-            gender,
-            residential_address,
-            caste,
-            aadhaar_no,
-            pan_no,
-            status,
-            created_at
-        FROM customer
-        ORDER BY customer_id
+    tbl = resolve_table("customer")
+    id_col = "cust_id" if tbl == "tbl_customers" else "customer_id"
+
+    rows = query_db(
+        f"""
+        SELECT *
+        FROM `{tbl}`
+        ORDER BY `{id_col}`
         """
     )
+    return [normalize_customer_row(r) for r in (rows or []) if r]
 
 
 # ============================================================
@@ -714,31 +722,23 @@ def customers_by_period(
     if not start:
         return []
 
-    return query_db(
-        """
-        SELECT
-            customer_id,
-            first_name,
-            last_name,
-            relation_name,
-            phone_no,
-            gender,
-            residential_address,
-            caste,
-            aadhaar_no,
-            pan_no,
-            status,
-            created_at
-        FROM customer
-        WHERE created_at >= %s
-          AND created_at < %s
-        ORDER BY created_at
+    tbl = resolve_table("customer")
+    date_col = "cust_reg_date" if tbl == "tbl_customers" else "created_at"
+
+    rows = query_db(
+        f"""
+        SELECT *
+        FROM `{tbl}`
+        WHERE `{date_col}` >= %s
+          AND `{date_col}` < %s
+        ORDER BY `{date_col}`
         """,
         (
             start,
             end
         )
     )
+    return [normalize_customer_row(r) for r in (rows or []) if r]
 
 
 def creation_answer(
@@ -871,6 +871,10 @@ def validation_answer(
     session: Dict[str, Any]
 ):
 
+    customer_id = get_customer_id(
+        text
+    )
+
     all_users = any(
         phrase in text
         for phrase in [
@@ -899,10 +903,6 @@ def validation_answer(
             "who has invalid",
         ]
     ) or (not customer_id and any(w in text.lower() for w in ["invalid", "defect", "defective", "audit"]))
-
-    customer_id = get_customer_id(
-        text
-    )
 
     previous_created_rows = (
         session.get(
@@ -1208,29 +1208,39 @@ def format_transaction(
     transaction_date = (
         row.get("transaction_date")
         or
-        row.get("date")
+        row.get("fd_trans_date")
+        or
+        row.get("trans_date")
         or
         row.get("created_at")
     )
 
     account_no = (
+        row.get("fd_acc_no")
+        or
+        row.get("rd_acc_no")
+        or
+        row.get("sb_acc_no")
+        or
         row.get("account_no")
         or
         row.get("account_number")
         or
-        row.get("account")
-        or
-        "N/A"
+        (f"FD Account #{row.get('fd_acc_id')}" if row.get("fd_acc_id") else "N/A")
     )
 
     customer_name = (
         row.get("customer_name")
+        or
+        row.get("cust_fname")
         or
         "N/A"
     )
 
     description = (
         row.get("description")
+        or
+        row.get("remarks")
         or
         "N/A"
     )
@@ -1240,22 +1250,31 @@ def format_transaction(
         if
         row.get("transaction_amount")
         is not None
-        else
-        row.get("amount")
+        else (
+            row.get("fd_trans_amt")
+            if row.get("fd_trans_amt") is not None
+            else (
+                row.get("trans_amt")
+                if row.get("trans_amt") is not None
+                else row.get("amount")
+            )
+        )
     )
 
-    raw_type = str(row.get("transaction_type") or row.get("type") or "N/A").upper()
+    raw_type = str(row.get("fd_trans_type") or row.get("trans_type") or row.get("transaction_type") or row.get("type") or "N/A").upper()
     if raw_type in ("DEPOSIT", "CREDIT"):
         type_str = "Deposit (Credit)"
     elif raw_type in ("WITHDRAWAL", "DEBIT"):
         type_str = "Withdrawal (Debit)"
     else:
-        type_str = row.get("transaction_type") or row.get("type") or "N/A"
+        type_str = row.get("fd_trans_type") or row.get("transaction_type") or row.get("type") or "N/A"
 
     payment_mode = (
         row.get("mode_of_pay")
         or
         row.get("payment_mode")
+        or
+        row.get("paymode")
         or
         row.get("mode")
         or
@@ -1282,8 +1301,10 @@ def transaction_rows(
     period: Optional[str] = None
 ):
 
+    tbl = resolve_table("fd_transactions")
+
     columns = table_columns(
-        "fd_transactions"
+        tbl
     )
 
     if not columns:
@@ -1293,6 +1314,7 @@ def transaction_rows(
         columns,
         [
             "transaction_date",
+            "fd_trans_date",
             "created_at",
             "date",
         ]
@@ -1303,6 +1325,7 @@ def transaction_rows(
         [
             "customer_id",
             "cust_id",
+            "fd_acc_id",
         ]
     )
 
@@ -1310,9 +1333,9 @@ def transaction_rows(
 
         date_col = "transaction_date"
 
-    sql = """
+    sql = f"""
         SELECT *
-        FROM fd_transactions
+        FROM `{tbl}`
     """
 
     conditions = []
@@ -1605,6 +1628,9 @@ def transaction_answer(
         list(rows[0].keys()),
         [
             "transaction_amount",
+            "fd_trans_amt",
+            "trans_amt",
+            "credit_amt",
             "amount",
             "deposit_amount",
         ]
@@ -1687,6 +1713,8 @@ def product_answer(
 ):
 
     table = product
+
+    table = resolve_table(product)
 
     columns = table_columns(
         table
@@ -2016,14 +2044,17 @@ def customer_count(
             f"{period.replace('_', ' ')}."
         )
 
+    tbl = resolve_table("customer")
+
     rows = query_db(
-        """
-        SELECT COUNT(*) AS total
-        FROM customer
+        f"""
+        SELECT DATABASE() AS current_db, COUNT(*) AS total
+        FROM `{tbl}`
         """
     )
 
-    total = rows[0]["total"]
+    total = rows[0]["total"] if rows else 0
+    current_db = rows[0].get("current_db") if rows else os.getenv("DB_NAME", "")
 
     session["last_intent"] = (
         "CUSTOMER_COUNT"
@@ -2037,7 +2068,7 @@ def customer_count(
 
     return (
         f"There are currently {total} "
-        "customers in the banking database."
+        f"customers in the '{current_db}' database (`{tbl}`)."
     )
 
 
@@ -2343,6 +2374,13 @@ def detect_intent(
             return "ALL_SCHEMES"
 
     # --------------------------------------------------------
+    # DATABASE INFO
+    # --------------------------------------------------------
+
+    if any(phrase in t for phrase in ["which database", "what database", "current database", "connected database", "db name", "database name"]):
+        return "DATABASE_INFO"
+
+    # --------------------------------------------------------
     # PRODUCTS: FD / RD / SHARE (when not explicit transactions)
     # --------------------------------------------------------
 
@@ -2407,6 +2445,13 @@ def detect_intent(
     # CUSTOMER DETAILS
     # --------------------------------------------------------
 
+    if (
+        get_customer_id(t)
+        and any(w in t for w in ["customer", "user", "member", "cust", "profile"])
+        and not any(w in t for w in ["fd", "rd", "share", "transact", "transaction", "validate", "validation", "audit", "defect"])
+    ):
+        return "CUSTOMER_DETAILS"
+
     if any(
         phrase in t
         for phrase in [
@@ -2420,6 +2465,15 @@ def detect_intent(
             "details for customer",
             "details of user",
             "details for user",
+            "show customer",
+            "show user",
+            "show member",
+            "view customer",
+            "view user",
+            "view member",
+            "get customer",
+            "get user",
+            "get member",
         ]
     ):
 
@@ -2574,7 +2628,22 @@ def chat(
 
         try:
 
-            if intent == "CUSTOMER_COUNT":
+            if intent == "DATABASE_INFO":
+
+                tbl = resolve_table("customer")
+                db_res = query_db(f"SELECT DATABASE() AS current_db, COUNT(*) as cust_count FROM `{tbl}`")
+                active_db = db_res[0]["current_db"] if db_res else os.getenv("DB_NAME")
+                cust_cnt = db_res[0]["cust_count"] if db_res else 0
+                answer = (
+                    f"Active Database Connection:\n"
+                    f"• Database Name: {active_db}\n"
+                    f"• Table Used: {tbl} ({cust_cnt} customer records)\n"
+                    f"• Host: {DB_HOST}:{DB_PORT}\n"
+                    f"• User: {DB_USER}"
+                )
+                session["last_intent"] = "DATABASE_INFO"
+
+            elif intent == "CUSTOMER_COUNT":
 
                 answer = customer_count(
                     normalized,
@@ -2818,15 +2887,18 @@ def chat(
 def health():
 
     database = False
+    connected_db = None
     ai_model_ready = False
 
     try:
 
         rows = query_db(
-            "SELECT 1 AS ok"
+            "SELECT DATABASE() AS current_db, 1 AS ok"
         )
 
-        database = bool(rows)
+        if rows:
+            database = True
+            connected_db = rows[0].get("current_db")
 
     except Exception as exc:
 
@@ -2856,6 +2928,8 @@ def health():
             if database
             else "not connected"
         ),
+
+        "connected_database": connected_db,
 
         "ai_engine": (
             "ready (custom model)"

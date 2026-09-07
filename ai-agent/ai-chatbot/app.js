@@ -201,7 +201,11 @@ function addMessage(text, sender = "bot") {
     // Avatar
     const avatar = document.createElement("div");
     avatar.className = sender === "user" ? "msg-avatar user-avatar" : "msg-avatar bot-avatar";
-    avatar.textContent = sender === "user" ? "👤" : "✦";
+    if (sender === "user") {
+        avatar.textContent = "👤";
+    } else {
+        avatar.innerHTML = '<img src="assets/logo.png" alt="" width="28" height="28">';
+    }
     group.appendChild(avatar);
 
     // Message card
@@ -287,7 +291,7 @@ function showTyping() {
 
     const avatar = document.createElement("div");
     avatar.className = "msg-avatar bot-avatar";
-    avatar.textContent = "✦";
+    avatar.innerHTML = '<img src="assets/logo.png" alt="" width="28" height="28">';
     group.appendChild(avatar);
 
     const msg = document.createElement("div");
@@ -425,7 +429,7 @@ if (clearBtn) {
         if (!messages) return;
         messages.innerHTML = `
             <div class="msg-group bot-group">
-                <div class="msg-avatar bot-avatar">✦</div>
+                <div class="msg-avatar bot-avatar"><img src="assets/logo.png" alt="" width="28" height="28"></div>
                 <div class="msg bot">
                     <div class="msg-meta">
                         <span class="agent-name">E-Sahakara Agent</span>
