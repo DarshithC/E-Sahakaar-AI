@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <title>E-Sahakara Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link
+        rel="stylesheet"
+        href="style.css?v=20260907_6"
+    >
+</head>
+
+
+<body>
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <header class="topbar">
+
+        <div class="brand">
+
+            <div class="brand-letter">
+                E
+            </div>
+
+            <div>
+                E-SAHAKARA
+            </div>
+
+        </div>
+
+
+        <div class="admin">
+
+            Admin
+
+            <span>
+                ♟⌄
+            </span>
+
+        </div>
+
+    </header>
+
+
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+
+    <aside class="sidebar">
+
+        <div class="side-item active">
+            <span>⌂</span>
+            Dashboard
+        </div>
+
+        <div class="side-item">
+            <span>⚙</span>
+            Management
+            <b>‹</b>
+        </div>
+
+        <div class="side-item">
+            <span>♙</span>
+            Customers Mang.
+            <b>‹</b>
+        </div>
+
+        <div class="side-item">
+            <span>▣</span>
+            Associate Mang.
+            <b>‹</b>
+        </div>
+
+        <div class="side-item">
+            <span>▤</span>
+            Accounts
+            <b>‹</b>
+        </div>
+
+        <div class="side-item">
+            <span>▣</span>
+            Transactions
+            <b>‹</b>
+        </div>
+
+        <div class="side-item">
+            <span>▱</span>
+            Asset Management
+            <b>‹</b>
+        </div>
+
+        <div class="side-item">
+            <span>▥</span>
+            Reports
+        </div>
+
+
+        <div class="sidebar-spacer"></div>
+
+
+        <div class="side-item">
+            <span>◉</span>
+            Support History
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN DASHBOARD
+         ===================================================== -->
+
+    <main class="dashboard">
+
+        <div class="dashboard-title">
+
+            <div>
+
+                <h1>
+                    Dashboard
+                </h1>
+
+                <p>
+                    E-Sahakara banking dashboard
+                </p>
+
+            </div>
+
+
+            <div class="date-box">
+
+                <span>
+                    Today
+                </span>
+
+                <strong id="dashboardDate">
+                    05 September 2026
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <!-- SUMMARY CARDS -->
+
+        <section class="cards">
+
+            <div class="card">
+
+                <strong>
+                    47
+                </strong>
+
+                <small>
+                    Total Customers
+                </small>
+
+            </div>
+
+
+            <div class="card">
+
+                <strong>
+                    21
+                </strong>
+
+                <small>
+                    Active Share Accounts
+                </small>
+
+            </div>
+
+
+            <div class="card">
+
+                <strong>
+                    17
+                </strong>
+
+                <small>
+                    Active Loan Accounts
+                </small>
+
+            </div>
+
+
+            <div class="card">
+
+                <strong>
+                    21
+                </strong>
+
+                <small>
+                    Active FD Accounts
+                </small>
+
+            </div>
+
+
+            <div class="card">
+
+                <strong>
+                    20
+                </strong>
+
+                <small>
+                    Active RD Accounts
+                </small>
+
+            </div>
+
+
+            <div class="card">
+
+                <strong>
+                    30
+                </strong>
+
+                <small>
+                    Active Pigmy Accounts
+                </small>
+
+            </div>
+
+
+            <div class="card">
+
+                <strong>
+                    26
+                </strong>
+
+                <small>
+                    Active CASA Accounts
+                </small>
+
+            </div>
+
+
+            <div class="card">
+
+                <strong>
+                    7
+                </strong>
+
+                <small>
+                    Active Suspense Acc.
+                </small>
+
+            </div>
+
+        </section>
+
+
+        <!-- APPROVAL PENDING -->
+
+        <section class="panel">
+
+            <div class="panel-heading">
+
+                <div>
+
+                    <h2>
+                        Approval Pending
+                    </h2>
+
+                    <p>
+                        Applications waiting for approval
+                    </p>
+
+                </div>
+
+
+                <button class="view-button">
+                    View All
+                </button>
+
+            </div>
+
+
+            <div class="pending-grid">
+
+                <div class="pending-item">
+
+                    <span class="pending-icon">
+                        ♙
+                    </span>
+
+                    <strong>
+                        2
+                    </strong>
+
+                    <span>
+                        Customer Approval Pending
+                    </span>
+
+                </div>
+
+
+                <div class="pending-item">
+
+                    <span class="pending-icon">
+                        ▣
+                    </span>
+
+                    <strong>
+                        0
+                    </strong>
+
+                    <span>
+                        CASA Account Approval Pending
+                    </span>
+
+                </div>
+
+
+                <div class="pending-item">
+
+                    <span class="pending-icon">
+                        ⚑
+                    </span>
+
+                    <strong>
+                        3
+                    </strong>
+
+                    <span>
+                        Share Approval Pending
+                    </span>
+
+                </div>
+
+
+                <div class="pending-item">
+
+                    <span class="pending-icon">
+                        ◎
+                    </span>
+
+                    <strong>
+                        1
+                    </strong>
+
+                    <span>
+                        RD Approval Pending
+                    </span>
+
+                </div>
+
+
+                <div class="pending-item">
+
+                    <span class="pending-icon">
+                        ♙
+                    </span>
+
+                    <strong>
+                        1
+                    </strong>
+
+                    <span>
+                        Pigmy Approval Pending
+                    </span>
+
+                </div>
+
+
+                <div class="pending-item">
+
+                    <span class="pending-icon">
+                        ▣
+                    </span>
+
+                    <strong>
+                        4
+                    </strong>
+
+                    <span>
+                        Loan Approval Pending
+                    </span>
+
+                </div>
+
+
+                <div class="pending-item">
+
+                    <span class="pending-icon">
+                        ⚑
+                    </span>
+
+                    <strong>
+                        1
+                    </strong>
+
+                    <span>
+                        FD Approval Pending
+                    </span>
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+        <!-- LOWER DASHBOARD -->
+
+        <section class="lower-grid">
+
+
+            <!-- CASH SUMMARY -->
+
+            <div class="panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <h2>
+                            Cash Summary
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <div class="cash-row">
+
+                    <span>
+                        ₹ Opening Bal.
+                    </span>
+
+                    <strong>
+                        ****** 
+                    </strong>
+
+                </div>
+
+
+                <div class="cash-row">
+
+                    <span>
+                        ₹ Closing Bal.
+                    </span>
+
+                    <strong>
+                        ******
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <!-- MATURED ACCOUNTS -->
+
+            <div class="panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <h2>
+                            Matured Accounts
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <div class="matured-row">
+
+                    <span>
+                        ● FD Accounts
+                    </span>
+
+                    <strong>
+                        0
+                    </strong>
+
+                </div>
+
+
+                <div class="matured-row">
+
+                    <span>
+                        ◎ RD Accounts
+                    </span>
+
+                    <strong>
+                        0
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- SUPPORT -->
+
+        <section class="support-panel">
+
+            <div>
+
+                <h2>
+                    Support Desk
+                </h2>
+
+                <p>
+                    Need help? Contact the support team.
+                </p>
+
+            </div>
+
+
+            <button class="support-button">
+
+                ◉ Support Desk
+
+            </button>
+
+        </section>
+
+
+    </main>
+
+
+    <!-- =====================================================
+         AI FLOATING BUTTON
+         ===================================================== -->
+
+    <!-- =====================================================
+         AWS AI AGENT LAUNCHER
+         ===================================================== -->
+    <button
+        id="aiButton"
+        class="fab aws-fab"
+        type="button"
+        title="Open E-Sahakara AWS AI Agent"
+        aria-label="Open E-Sahakara AWS AI Agent"
+        onclick="var w=document.getElementById('aiWindow'); var s=!w.classList.contains('open') && w.style.display!=='flex'; w.style.setProperty('display', s?'flex':'none', 'important'); w.classList.toggle('open', s); w.classList.toggle('active', s); document.getElementById('aiButton').classList.toggle('active', s); if(s){ var i=document.getElementById('input'); if(i) setTimeout(function(){i.focus();}, 50); }"
+    >
+        <span class="fab-pulse"></span>
+        <div class="fab-icon-sparkle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L14.4 8.6L21 11L14.4 13.4L12 20L9.6 13.4L3 11L9.6 8.6L12 2Z" fill="currentColor"/>
+                <path d="M19 16L20.2 19.3L23.5 20.5L20.2 21.7L19 25L17.8 21.7L14.5 20.5L17.8 19.3L19 16Z" fill="currentColor" opacity="0.8"/>
+            </svg>
+        </div>
+        <div class="fab-icon-close">✕</div>
+    </button>
+
+
+    <!-- =====================================================
+         AWS AI AGENT CHAT WINDOW
+         ===================================================== -->
+    <section id="aiWindow" class="chat aws-ai-theme">
+        <div class="chatHead">
+            <div class="chat-brand">
+                <div class="chat-avatar-wrap">
+                    <div class="chat-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                        </svg>
+                    </div>
+                    <span class="status-indicator-ping"></span>
+                </div>
+                <div class="chat-title-group">
+                    <div class="chat-title-row">
+                        <span class="chat-agent-title">E-Sahakara Agent</span>
+                    </div>
+                    <div class="chat-status-sub">
+                        <span class="status-dot"></span>
+                        <span>CBS Financial Copilot • Connected</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-controls">
+                <button id="clearChat" type="button" class="btn-icon-head" title="Clear conversation" aria-label="Clear conversation">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                </button>
+                <button id="closeAI" type="button" class="btn-icon-head close-btn" aria-label="Close AI"
+                    onclick="var w=document.getElementById('aiWindow'); if(w){ w.style.setProperty('display', 'none', 'important'); w.classList.remove('open', 'active'); document.getElementById('aiButton').classList.remove('active'); }">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- MESSAGES CONTAINER -->
+        <div id="messages" class="messages">
+            <div class="msg-group bot-group">
+                <div class="msg-avatar bot-avatar">✦</div>
+                <div class="msg bot">
+                    <div class="msg-meta">
+                        <span class="agent-name">E-Sahakara Agent</span>
+                        <span class="agent-tag">Assistant</span>
+                    </div>
+                    <div class="msg-content">
+                        <p>Welcome to <strong>E-Sahakara Financial Intelligence</strong>. I am your autonomous AI assistant running directly on top of the CBS banking core.</p>
+                        <p>You can ask me about deposit schemes (FD/RD), member accounts, KYC validation, transactions, or approval workflows.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QUICK PROMPT CHIPS -->
+        <div class="quick-prompts-container" id="quickPrompts">
+            <div class="quick-prompts-header">Suggested Questions</div>
+            <div class="quick-prompts-scroll">
+                <button type="button" class="prompt-chip" data-prompt="How many FD schemes are there?">
+                    <span class="chip-icon">🏦</span>
+                    <span>How many FD schemes are there?</span>
+                </button>
+                <button type="button" class="prompt-chip" data-prompt="How many customers are in the database?">
+                    <span class="chip-icon">👥</span>
+                    <span>Total active customers</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- INPUT FORM -->
+        <form id="form" class="aws-input-container">
+            <div class="input-wrapper">
+                <textarea
+                    id="input"
+                    placeholder="Ask about schemes, members, accounts or transactions..."
+                    rows="1"
+                    maxlength="2000"
+                ></textarea>
+                <button id="sendAI" type="submit" aria-label="Send" title="Send message">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </form>
+
+        <footer class="chat-footer-aws">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span>CBS On-Premise AI • 100% Private • Bank Grade Security</span>
+        </footer>
+    </section>
+
+
+    <script>
+        function toggleAIChat(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            var win = document.getElementById("aiWindow");
+            var btn = document.getElementById("aiButton");
+            if (!win) return;
+            var isVisible = (win.style.display === "flex") ||
+                            win.classList.contains("open") ||
+                            win.classList.contains("active");
+            if (isVisible) {
+                win.style.setProperty("display", "none", "important");
+                win.classList.remove("open", "active");
+                if (btn) btn.classList.remove("active");
+            } else {
+                win.style.setProperty("display", "flex", "important");
+                win.classList.add("open", "active");
+                if (btn) btn.classList.add("active");
+                var inp = document.getElementById("input");
+                if (inp) {
+                    setTimeout(function() { inp.focus(); }, 60);
+                }
+            }
+        }
+        function closeAIChat(e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            var win = document.getElementById("aiWindow");
+            var btn = document.getElementById("aiButton");
+            if (!win) return;
+            win.style.setProperty("display", "none", "important");
+            win.classList.remove("open", "active");
+            if (btn) btn.classList.remove("active");
+        }
+        window.toggleAIChat = toggleAIChat;
+        window.closeAIChat = closeAIChat;
+
+        function bindChatbot() {
+            var btn = document.getElementById("aiButton");
+            var cls = document.getElementById("closeAI");
+            if (btn) btn.onclick = toggleAIChat;
+            if (cls) cls.onclick = closeAIChat;
+        }
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", bindChatbot);
+        } else {
+            bindChatbot();
+        }
+    </script>
+    <script
+        src="app.js?v=20260907_6"
+        defer
+    ></script>
+
+</body>
+
+</html>
